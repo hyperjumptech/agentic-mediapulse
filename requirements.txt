@@ -1,0 +1,7 @@
+agent-framework
+python-dotenv
+httpx
+redis
+psycopg[binary]
+fastapi
+uvicorn

@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=$(jq -r '.tool_input.file_path // empty'); case \"$f\" in *.py) ;; *) exit 0;; esac; o=$(conda run -n agentic-mediapulse ruff check . 2>&1); c=$?; fo=$(conda run -n agentic-mediapulse ruff format --check . 2>&1); fc=$?; if [ $c -ne 0 ] || [ $fc -ne 0 ]; then printf 'Ruff found issues (fix before continuing):\\n--- ruff check ---\\n%s\\n--- ruff format --check ---\\n%s\\n' \"$o\" \"$fo\" >&2; exit 2; fi",
+            "timeout": 60,
+            "statusMessage": "Running ruff checks..."
+          }
+        ]
+      }
+    ]
+  }
+}

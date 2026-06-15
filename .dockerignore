@@ -1,0 +1,38 @@
+# Mirrors .gitignore (Docker has no "include", so keep these two in sync).
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Environment / secrets
+.env
+
+# Tooling
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+
+.subject_cache.json
+
+# Docker build-context only (not in .gitignore): keep these out of the image.
+.git
+.github
+.claude
+tests
+newsletter.md
+newsletter_email.html
+evolution

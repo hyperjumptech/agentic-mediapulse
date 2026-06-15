@@ -1,0 +1,14 @@
+name: agentic-mediapulse
+channels:
+  - defaults
+dependencies:
+  - python=3.11
+  - pip
+  - pip:
+      - agent-framework
+      - python-dotenv
+      - httpx
+      - redis
+      - psycopg[binary]
+      - fastapi
+      - uvicorn
