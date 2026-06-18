@@ -56,4 +56,4 @@ def test_send_email_uses_default_sender(monkeypatch):
 
     mailer.send_email("a@b.com", "S", "<p>h</p>")
 
-    assert captured["json"]["from"] == "Mediapulse <onboarding@resend.dev>"
+    assert captured["json"]["from"] == "MediaPulse <onboarding@resend.dev>"

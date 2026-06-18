@@ -12,7 +12,7 @@ from agents.campaign import run_campaign
 from utils.db import fetch_subscriptions
 
 logging.basicConfig(level=logging.INFO)
-app = FastAPI(title="Mediapulse Newsletter API")
+app = FastAPI(title="MediaPulse Newsletter API")
 logger = logging.getLogger("mediapulse.api")
 
 

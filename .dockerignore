@@ -21,6 +21,13 @@ env/
 .ruff_cache/
 .pytest_cache/
 
+# Node (email-playground): keep the source for the build stage, drop the heavy/generated bits.
+node_modules/
+.react-email/
+email-playground/out/
+# Built fresh by the Docker template-builder stage, so never ship a local copy.
+/src/templates/*.html
+
 # OS / editor
 .DS_Store
 .idea/

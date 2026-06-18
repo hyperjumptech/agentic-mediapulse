@@ -1,0 +1,26 @@
+{
+  "name": "email-playground",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "React Email templates and preview playground for MediaPulse emails. Exports tokenized HTML templates into src/templates for the Python app to fill.",
+  "scripts": {
+    "dev": "email dev",
+    "export": "email export",
+    "build:templates": "tsx scripts/build-templates.mts"
+  },
+  "dependencies": {
+    "@react-email/components": "1.0.12",
+    "@react-email/render": "2.0.9",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "react-email": "6.6.3"
+  },
+  "devDependencies": {
+    "@react-email/ui": "^6.6.3",
+    "@types/node": "22.10.0",
+    "@types/react": "19.1.0",
+    "tsx": "4.19.2",
+    "typescript": "5.7.2"
+  }
+}
