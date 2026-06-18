@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from agents.campaign import run_campaign
-from utils.db import fetch_subscriptions
+from db.mediapulse import fetch_subscriptions
 
 
 def main() -> None:

@@ -6,7 +6,7 @@ import * as React from "react";
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const emailsDir = resolve(scriptDir, "../emails");
-const outputDir = resolve(scriptDir, "../../src/templates");
+const outputDir = resolve(scriptDir, "../../src/emails/templates");
 
 function toMarkers(html: string): string {
   return html.replace(/\[\[#(\w+)\]\]/g, "<!--#$1-->").replace(/\[\[\/(\w+)\]\]/g, "<!--/$1-->");

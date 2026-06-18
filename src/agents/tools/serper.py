@@ -5,10 +5,13 @@ import httpx
 
 def serper(endpoint: str, query: str, gl: str, hl: str, tbs: str = "") -> list[dict]:
     body = {"q": query}
+
     if gl:
         body["gl"] = gl
+
     if hl:
         body["hl"] = hl
+
     if tbs:
         body["tbs"] = tbs
 
@@ -28,6 +31,7 @@ def format_results(results: list[dict]) -> str:
         return "No results found."
 
     blocks = []
+
     for item in results[:10]:
         title = item.get("title", "")
         link = item.get("link", "")

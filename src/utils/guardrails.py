@@ -19,6 +19,7 @@ class SubjectGuardrail(AgentMiddleware):
 
     async def process(self, context: AgentContext, call_next: Callable[[], Awaitable[None]]) -> None:
         last = context.messages[-1] if context.messages else None
+
         if not (last and last.text and last.text.strip()):
             context.result = AgentResponse(
                 messages=[
@@ -43,8 +44,10 @@ class SourceRegistry:
 def _result_text(result: object) -> str:
     if result is None:
         return ""
+
     if isinstance(result, str):
         return result
+
     if isinstance(result, (list, tuple)):
         return " ".join(_result_text(item) for item in result)
 
@@ -70,6 +73,7 @@ class EnforceCitations(AgentMiddleware):
 
     async def process(self, context: AgentContext, call_next: Callable[[], Awaitable[None]]) -> None:
         await call_next()
+
         if context.stream or context.result is None or not self.registry.urls:
             return
 
@@ -77,10 +81,15 @@ class EnforceCitations(AgentMiddleware):
             for content in message.contents:
                 if getattr(content, "type", None) != "text" or not content.text:
                     continue
+
                 kept = []
+
                 for line in content.text.splitlines():
                     urls = _URL.findall(line)
+
                     if urls and not all(url in self.registry.urls for url in urls):
                         continue
+
                     kept.append(line)
+
                 content.text = "\n".join(kept)

@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "React Email templates and preview playground for MediaPulse emails. Exports tokenized HTML templates into src/templates for the Python app to fill.",
+  "description": "React Email templates and preview playground for MediaPulse emails. Exports tokenized HTML templates into src/emails/templates for the Python app to fill.",
   "scripts": {
     "dev": "email dev",
     "export": "email export",

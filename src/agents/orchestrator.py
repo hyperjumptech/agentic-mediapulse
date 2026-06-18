@@ -7,7 +7,7 @@ from agents.beats import BEATS
 from agents.editor import editor
 from agents.managing_editor import managing_editor
 from agents.reviewer import reviewer
-from utils.memory import remember_subject
+from db.memory import remember_subject
 from utils.sections import SECTIONS
 
 _URL_RE = re.compile(r"https?://[^\s\)]+")
@@ -41,13 +41,18 @@ def _is_article(url: str) -> bool:
         parsed = urllib.parse.urlparse(url)
     except ValueError:
         return False
+
     if parsed.scheme not in ("http", "https") or not parsed.netloc:
         return False
+
     segments = [segment for segment in parsed.path.split("/") if segment]
+
     if not segments:
         return False
+
     if parsed.query and {key.lower() for key in urllib.parse.parse_qs(parsed.query)} & _LISTING_PARAMS:
         return False
+
     slug = re.sub(r"\.(html?|aspx?|php|jsp)$", "", segments[-1], flags=re.IGNORECASE)
 
     return slug.count("-") >= 2 or bool(re.fullmatch(r"\d{4,}", slug))
@@ -59,13 +64,16 @@ def _is_article(url: str) -> bool:
 def _section_problems(draft: str, allowed_urls: set[str]) -> list[str]:
     problems: list[str] = []
     reads = _READ_RE.findall(draft)
+
     if len(reads) < 2:
         problems.append(
             "Include at least 2 and at most 5 entries, each a single sentence"
             " ending with a '[Read: <title>](<url>)' line."
         )
+
     for raw in reads:
         url = raw.strip()
+
         if not url.startswith("http"):
             problems.append(f"Entry has no real URL: {url or '(empty)'}")
         elif url not in allowed_urls:
@@ -86,25 +94,32 @@ async def _run_beat(beat, brief: str) -> tuple[str, str]:
 
     # researcher finds sources; deterministic sufficiency feedback
     candidates, note = "", ""
+
     for _ in range(RETRIES):
         candidates = (await beat.researcher.run(head + note)).text
+
         if len({*_URL_RE.findall(candidates)}) >= 3:
             break
+
         note = "\n\nFEEDBACK: too few sources with real URLs, widen recency to 'week' or try different queries."
 
     # writer drafts from candidates; deterministic citation/format feedback
     draft, feedback = "", ""
+
     for _ in range(RETRIES + 1):
         draft = (
             await beat.writer.run(f"BRIEF:\n{brief}\n\nCANDIDATES:\n{candidates}\n\nSECTION: {section.name}{feedback}")
         ).text
         problems = _section_problems(draft, beat.registry.urls)
+
         if not problems:
             break
+
         feedback = "\n\nFEEDBACK (fix these):\n- " + "\n- ".join(problems)
 
     # editor reviews the section (agent feedback -> one writer revision)
     verdict = (await editor.run(f"REVIEW the '{section.name}' section:\n\n{draft}")).text
+
     if not _is_ok(verdict):
         draft = (
             await beat.writer.run(
@@ -125,11 +140,15 @@ async def _cover_beats(brief: str) -> dict[str, str]:
 def _gaps_from(verdict: str, sections: set[str]) -> list[tuple[str, str]]:
     """Parse the managing editor's 'Section :: missing angle' lines into known-section gaps."""
     gaps: list[tuple[str, str]] = []
+
     for line in verdict.splitlines():
         match = _GAP_RE.match(line)
+
         if not match:
             continue
+
         section, need = match.group(1).strip(), match.group(2).strip()
+
         if section in sections and need:
             gaps.append((section, need))
 
@@ -158,15 +177,21 @@ async def _newsroom_discussion(brief: str, drafts: dict[str, str]) -> dict[str, 
     once the editor says the edition is complete. New entries pass the same per-section guards.
     """
     beats_by_name = {beat.section.name: beat for beat in BEATS}
+
     for _ in range(DISCUSSION_ROUNDS):
         edition = "\n\n".join(f"## {section.name}\n{drafts[section.name]}" for section in SECTIONS)
         verdict = (await managing_editor.run(f"BRIEF:\n{brief}\n\nCURRENT EDITION:\n{edition}")).text
+
         if verdict.strip().upper().startswith("COMPLETE"):
             break
+
         gaps = _gaps_from(verdict, set(beats_by_name))[:MAX_GAPS_PER_ROUND]
+
         if not gaps:
             break
+
         additions = await asyncio.gather(*(_fill_gap(beats_by_name[section], brief, need) for section, need in gaps))
+
         for (section, _), addition in zip(gaps, additions):
             if addition.strip():
                 drafts[section] = f"{drafts[section]}\n\n{addition}"
@@ -177,8 +202,10 @@ async def _newsroom_discussion(brief: str, drafts: dict[str, str]) -> dict[str, 
 async def _masthead(brief: str, drafts: dict[str, str], notes: str = "") -> tuple[str, str]:
     body = "\n\n".join(f"## {section.name}\n{drafts[section.name]}" for section in SECTIONS)
     prompt = f"MASTHEAD\n\nBRIEF:\n{brief}\n\nSECTION DRAFTS:\n{body}"
+
     if notes:
         prompt += f"\n\nREVIEWER NOTES (address these):\n{notes}"
+
     out = (await editor.run(prompt)).text.strip()
     lines = out.splitlines()
     title = lines[0].lstrip("# ").strip() if lines else "Newsletter"
@@ -226,14 +253,18 @@ def _subject_terms(subject: str, brief: str) -> tuple[str, "re.Pattern | None"]:
     match = _SUBJECT_LINE_RE.search(brief)
     raw_name = match.group(1).strip() if match else ""
     name = _short_name(raw_name) or raw_name or subject
+
     if len(name) < 2:
         return subject, None
 
     # Company-name aliases match case-insensitively: they are distinctive proper nouns with no common-word risk.
     names: set[str] = {name}
+
     if raw_name:
         names.update({raw_name, f"PT {name} Tbk", f"PT {name}", f"{name} Tbk"})
+
     words = name.split()
+
     if len(words) >= 3:
         names.add(" ".join(words[:2]))  # fold a shortened form back, but never down to one (often generic) word
 
@@ -241,15 +272,19 @@ def _subject_terms(subject: str, brief: str) -> tuple[str, "re.Pattern | None"]:
     # so folding "baby" or "map" into the company name would wreck the prose; only the all-caps ticker is meant.
     tickers: set[str] = set()
     ticker_match = _TICKER_LINE_RE.search(brief)
+
     for candidate in (subject, ticker_match.group(1) if ticker_match else ""):
         token = re.split(r"[\s,/(]+", candidate.strip(), maxsplit=1)[0].strip(" .")
+
         if re.fullmatch(r"[A-Z]{3,6}\d{0,2}", token):  # an uppercase exchange ticker like DSSA or GOTO
             tickers.add(token)
 
     alternatives = [re.escape(alias) for alias in sorted(names, key=len, reverse=True) if alias]
     alternatives += [f"(?-i:{re.escape(ticker)})" for ticker in sorted(tickers, key=len, reverse=True)]
+
     if not alternatives:
         return name, None
+
     pattern = re.compile(r"\b(?:" + "|".join(alternatives) + r")\b", re.IGNORECASE)
 
     return name, pattern
@@ -263,6 +298,7 @@ def _canonicalize_subject(text: str, name: str, pattern: "re.Pattern | None") ->
     """
     if pattern is None:
         return text
+
     text = pattern.sub(name, text)
     text = re.sub(r"\b(" + re.escape(name) + r")(?:\s+\1\b)+", r"\1", text)  # collapse an accidental "Name Name"
 
@@ -275,6 +311,7 @@ def _canonical_url(url: str) -> str:
         parsed = urllib.parse.urlparse(url.strip().lower())
     except ValueError:
         return url.strip().lower()
+
     host = parsed.netloc.removeprefix("www.")
 
     return f"{host}{parsed.path.rstrip('/')}"
@@ -289,6 +326,7 @@ def _too_similar(tokens: frozenset, seen: list, threshold: float = 0.55) -> bool
     """True if `tokens` overlaps any kept entry at or above `threshold` (Jaccard similarity)."""
     for prior in seen:
         union = tokens | prior
+
         if union and len(tokens & prior) / len(union) >= threshold:
             return True
 
@@ -303,9 +341,12 @@ def _first_sentences(text: str, limit: int = _MAX_SENTENCES) -> str:
     parts = _SENTENCE_SPLIT_RE.split(text)
     kept = text if len(parts) <= limit else " ".join(parts[:limit])
     words = kept.split()
+
     if len(words) <= _MAX_WORDS:
         return kept
+
     clipped = " ".join(words[:_MAX_WORDS])
+
     if "," in clipped:
         clipped = clipped[: clipped.rfind(",")]  # end on a clause, not mid-thought
 
@@ -321,24 +362,36 @@ def _clean_section(draft: str, name: str = "", pattern: "re.Pattern | None" = No
     """
     lines = draft.splitlines()
     entries: list[str] = []
+
     for index, line in enumerate(lines):
         link = _LINK_RE.search(line)
+
         if not link:
             continue
+
         cursor = index - 1
+
         while cursor >= 0 and not lines[cursor].strip():
             cursor -= 1
+
         if cursor < 0:
             continue
+
         body = lines[cursor].strip()
+
         if body == "---" or body.startswith("#") or _LINK_RE.search(body):
             continue
+
         body = _LEADING_MARKER_RE.sub("", body)  # drop any leading bullet or number marker
+
         if _MARKET_NOISE_RE.search(body) or _MARKET_NOISE_RE.search(link.group(0)):
             continue  # drop stock-index / price / technical-analysis noise; readers want company news
+
         body = _humanize(body)
+
         if name:
             body = _canonicalize_subject(body, name, pattern)
+
         body = _first_sentences(body)
         entries.append(f"{body}\n\n{link.group(0)}\n\n---")
 
@@ -347,19 +400,25 @@ def _clean_section(draft: str, name: str = "", pattern: "re.Pattern | None" = No
 
 
 def _assemble(
-    symbol: str, title: str, summary: str, drafts: dict[str, str], name: str = "", pattern: "re.Pattern | None" = None
+    subject: str, title: str, summary: str, drafts: dict[str, str], name: str = "", pattern: "re.Pattern | None" = None
 ) -> str:
-    symbol = symbol.strip()
+    subject = subject.strip()
+
     # The editor sometimes echoes a "<TICKER> Pulse:" prefix; strip any leading one so we never double it.
     while _PULSE_PREFIX_RE.match(title):
         title = _PULSE_PREFIX_RE.sub("", title, count=1).strip()
+
     if name:
         summary = _canonicalize_subject(summary, name, pattern)
-    parts = [f"# {symbol} Pulse: {title}", "", summary, ""]
+
+    parts = [f"# {subject} Pulse: {title}", "", summary, ""]
+
     for section in SECTIONS:
         body = _clean_section(drafts.get(section.name, ""), name, pattern)
+
         if not body.strip():
             continue  # skip a section with no usable entries rather than printing a bare heading
+
         parts.append(f"## {section.name}")
         parts.append(body)
         parts.append("")
@@ -380,18 +439,24 @@ def _dedupe_urls(newsletter: str) -> str:
             line for line in entry if line.strip() and line.strip() != "---" and not _LINK_RE.search(line)
         )
         tokens = _content_key(summary)
+
         if (urls and any(url in seen_urls for url in urls)) or _too_similar(tokens, seen_tokens):
             entry.clear()
             return False
+
         seen_urls.update(urls)
+
         if tokens:
             seen_tokens.append(tokens)
+
         out.extend(entry)
         entry.clear()
+
         return True
 
     for line in newsletter.splitlines():
         stripped = line.strip()
+
         if stripped == "---":
             if flush():
                 out.append(line)
@@ -401,6 +466,7 @@ def _dedupe_urls(newsletter: str) -> str:
             out.append(line)
         else:
             entry.append(line)
+
     out.extend(entry)
 
     return "\n".join(out)
@@ -418,6 +484,7 @@ async def run_newsletter(subject: str) -> str:
 
     # reviewer critiques the whole edition (agent feedback -> one masthead revision)
     verdict = (await reviewer.run(newsletter)).text
+
     if not _is_ok(verdict):
         title, summary = await _masthead(brief, drafts, notes=verdict)
         newsletter = _assemble(subject, title, summary, drafts, name, pattern)

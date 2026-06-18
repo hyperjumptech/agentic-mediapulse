@@ -1,4 +1,4 @@
-import utils.mailer as mailer
+import emails.mailer as mailer
 
 
 class FakeResponse:

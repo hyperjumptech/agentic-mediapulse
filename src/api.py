@@ -9,7 +9,7 @@ load_dotenv()
 from fastapi import BackgroundTasks, Depends, FastAPI, Header, HTTPException
 
 from agents.campaign import run_campaign
-from utils.db import fetch_subscriptions
+from db.mediapulse import fetch_subscriptions
 
 logging.basicConfig(level=logging.INFO)
 app = FastAPI(title="MediaPulse Newsletter API")
@@ -19,8 +19,10 @@ logger = logging.getLogger("mediapulse.api")
 def require_api_key(x_api_key: str = Header(default="")) -> None:
     """Reject requests whose `X-API-Key` header does not match the `SECRET_KEY` env var."""
     expected = os.getenv("SECRET_KEY", "")
+
     if not expected:
         raise HTTPException(status_code=503, detail="Server missing SECRET_KEY")
+
     if not secrets.compare_digest(x_api_key, expected):
         raise HTTPException(status_code=401, detail="Invalid or missing API key")
 

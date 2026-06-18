@@ -28,7 +28,7 @@ npm run build:templates
 ```
 
 For every `emails/*.tsx` that exports both a default component and a `templateProps` object, this
-renders the component in template mode and writes `../src/templates/<name>.html`: a tokenized HTML
+renders the component in template mode and writes `../src/emails/templates/<name>.html`: a tokenized HTML
 file with `{{placeholders}}` and `<!--#region-->…<!--/region-->` blocks that the Python side fills
 per message. The output is a gitignored build artifact, regenerated in CI and the Docker build.
 **The Python tests and the running app require these files**, so run it once after `npm install`.
@@ -41,7 +41,7 @@ per message. The output is a gitignored build artifact, regenerated in CI and th
    `<Region name="...">` (which emits `[[#name]]`/`[[/name]]` markers) and leave content as
    `{{token}}` placeholders.
 3. Export `templateProps`: the props that drive template-mode rendering.
-4. Run `npm run build:templates`, then fill `src/templates/<name>.html` from Python.
+4. Run `npm run build:templates`, then fill `src/emails/templates/<name>.html` from Python.
 
 Templates without `templateProps` are preview-only and are skipped by the build.
 
