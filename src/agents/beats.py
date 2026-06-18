@@ -3,9 +3,9 @@ from dataclasses import dataclass
 from agent_framework import Agent
 
 from agents.researcher import make_researcher
+from agents.runtime.guardrails import SourceRegistry
+from agents.sections import SECTIONS, Section
 from agents.writer import make_writer
-from utils.guardrails import SourceRegistry
-from utils.sections import SECTIONS, Section
 
 
 @dataclass

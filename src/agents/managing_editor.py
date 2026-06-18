@@ -1,8 +1,7 @@
-from agent_framework import Agent
+from agents.runtime.chat_client import SKILLS, chat_client
+from agents.runtime.make_agent import make_agent
 
-from utils.client import SKILLS, chat_client
-
-managing_editor = Agent(
+managing_editor = make_agent(
     name="managing_editor",
     description="Chairs the newsroom roundtable and finds coverage gaps across the edition.",
     client=chat_client("managing_editor"),

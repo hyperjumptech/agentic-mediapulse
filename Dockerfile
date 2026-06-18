@@ -21,9 +21,12 @@ COPY . .
 COPY --from=template-builder /build/src/emails/templates/ src/emails/templates/
 
 RUN useradd --no-create-home --shell /bin/false app \
+    && chmod +x docker-entrypoint.sh \
     && chown -R app:app /app
 USER app
 
 EXPOSE 8000
 
+# Entrypoint applies migrations (alembic upgrade head) before launching the command.
+ENTRYPOINT ["./docker-entrypoint.sh"]
 CMD ["uvicorn", "api:app", "--app-dir", "src", "--host", "0.0.0.0", "--port", "8000"]

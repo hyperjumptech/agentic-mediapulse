@@ -45,3 +45,48 @@ def test_save_newsletter_swallows_errors(monkeypatch):
     monkeypatch.setattr(newsletters, "get_engine", boom)
 
     assert newsletters.save_newsletter("ACME", "content", {}) is None
+
+
+def test_create_newsletter_opens_pending_row(monkeypatch):
+    engine = _use_sqlite(monkeypatch)
+    newsletter_id = newsletters.create_newsletter("ACME")
+
+    assert isinstance(newsletter_id, int)
+
+    with Session(engine) as session:
+        row = session.get(newsletters.Newsletter, newsletter_id)
+
+    assert row.status == "pending"
+    assert row.content == ""
+
+
+def test_finalize_newsletter_fills_and_completes(monkeypatch):
+    engine = _use_sqlite(monkeypatch)
+    newsletter_id = newsletters.create_newsletter("ACME")
+    metadata = {"ticker": "ACME", "sources": ["https://x.com/a"]}
+    newsletters.finalize_newsletter(newsletter_id, content="# ACME Pulse", metadata=metadata)
+
+    with Session(engine) as session:
+        row = session.get(newsletters.Newsletter, newsletter_id)
+
+    assert row.status == "complete"
+    assert row.content == "# ACME Pulse"
+    assert row.meta == metadata
+
+
+def test_finalize_newsletter_marks_failed(monkeypatch):
+    engine = _use_sqlite(monkeypatch)
+    newsletter_id = newsletters.create_newsletter("ACME")
+    newsletters.finalize_newsletter(newsletter_id, status="failed")
+
+    with Session(engine) as session:
+        row = session.get(newsletters.Newsletter, newsletter_id)
+
+    assert row.status == "failed"
+    assert row.content == ""
+
+
+def test_finalize_newsletter_noop_without_id(monkeypatch):
+    _use_sqlite(monkeypatch)
+
+    newsletters.finalize_newsletter(None, content="ignored")  # must not raise

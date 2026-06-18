@@ -1,14 +1,15 @@
 from agent_framework import Agent
 
+from agents.runtime.chat_client import SKILLS, chat_client
+from agents.runtime.guardrails import RecordSources, SourceRegistry
+from agents.runtime.make_agent import make_agent
+from agents.sections import Section
 from agents.tools import search
-from utils.client import SKILLS, chat_client
-from utils.guardrails import RecordSources, SourceRegistry
-from utils.sections import Section
 
 
 def make_researcher(section: Section, registry: SourceRegistry) -> Agent:
     """A news researcher for one beat: finds and ranks candidate articles."""
-    return Agent(
+    return make_agent(
         name=f"researcher_{section.slug}",
         description=f"Finds and ranks sources for the {section.name} beat.",
         client=chat_client("researcher"),

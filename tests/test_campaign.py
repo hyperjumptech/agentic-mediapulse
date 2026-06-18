@@ -67,19 +67,37 @@ async def test_run_campaign_fetches_subscriptions_when_unset(monkeypatch):
     assert result["delivered"] == [{"email": "z@x.com", "ticker": "ACME"}]
 
 
-async def test_each_ticker_is_saved_once_with_ticker_and_sources(monkeypatch):
+async def test_each_ticker_is_finalized_once_with_ticker_and_sources(monkeypatch):
     _patch_pipeline(monkeypatch)
-    saved = []
+    finalized = []
 
-    def fake_save(subject, markdown, metadata):
-        saved.append((subject, metadata))
+    def fake_finalize(newsletter_id, *, content=None, metadata=None, status="complete"):
+        finalized.append((metadata, status))
 
-    monkeypatch.setattr(campaign, "save_newsletter", fake_save)
+    monkeypatch.setattr(campaign, "create_newsletter", lambda subject: 1)
+    monkeypatch.setattr(campaign, "finalize_newsletter", fake_finalize)
 
     await campaign.run_campaign(subscriptions=_subs(), send=False, log=lambda *a: None)
 
-    assert sorted(subject for subject, _meta in saved) == ["ACME", "GLOBEX"]  # once per unique ticker
+    completed = [metadata for metadata, _status in finalized if metadata is not None]
 
-    for _subject, metadata in saved:
-        assert metadata["ticker"] in {"ACME", "GLOBEX"}
+    assert sorted(metadata["ticker"] for metadata in completed) == ["ACME", "GLOBEX"]  # once per unique ticker
+
+    for metadata in completed:
         assert isinstance(metadata["sources"], list)
+
+
+async def test_failed_ticker_is_finalized_as_failed(monkeypatch):
+    _patch_pipeline(monkeypatch, fail_for={"ACME"})
+    finalized = []
+
+    def fake_finalize(newsletter_id, *, content=None, metadata=None, status="complete"):
+        finalized.append(status)
+
+    monkeypatch.setattr(campaign, "create_newsletter", lambda subject: 1)
+    monkeypatch.setattr(campaign, "finalize_newsletter", fake_finalize)
+
+    await campaign.run_campaign(subscriptions=_subs(), send=False, log=lambda *a: None)
+
+    assert "failed" in finalized  # the ACME run was marked failed
+    assert "complete" in finalized  # GLOBEX still completed

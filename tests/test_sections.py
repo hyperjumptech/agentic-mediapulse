@@ -1,4 +1,4 @@
-from utils.sections import SECTIONS, Section
+from agents.sections import SECTIONS, Section
 
 
 def test_slug_replaces_ampersand_and_spaces():

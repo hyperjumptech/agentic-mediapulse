@@ -1,6 +1,6 @@
 import os
 
-from sqlmodel import SQLModel, create_engine
+from sqlmodel import create_engine
 
 _engine = None
 
@@ -22,16 +22,10 @@ def _engine_url() -> str:
 
 
 def get_engine():
-    """Build the engine once and create the app's tables (idempotent, once per process)."""
+    """Build the engine once per process. The schema is owned by Alembic migrations, not create_all."""
     global _engine
 
     if _engine is None:
-        # Import here so the models register on SQLModel.metadata before create_all, avoiding a cycle.
-        from db.memory import SubjectMemory
-        from db.newsletters import Newsletter
-
-        engine = create_engine(_engine_url(), pool_pre_ping=True)
-        SQLModel.metadata.create_all(engine, tables=[Newsletter.__table__, SubjectMemory.__table__])
-        _engine = engine
+        _engine = create_engine(_engine_url(), pool_pre_ping=True)
 
     return _engine

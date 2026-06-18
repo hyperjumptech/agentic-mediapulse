@@ -1,4 +1,4 @@
-import utils.client as client
+import agents.runtime.chat_client as client
 
 
 class FakeChatClient:
