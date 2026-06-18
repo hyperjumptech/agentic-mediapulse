@@ -1,10 +1,10 @@
 from agent_framework import Agent
 
+from agents.providers.memory import SubjectMemoryProvider
+from agents.providers.ticker import TickerProfileProvider
 from agents.tools import search, web_fetch
 from utils.client import SKILLS, chat_client
 from utils.guardrails import SubjectGuardrail
-from utils.memory import SubjectMemoryProvider
-from utils.ticker import TickerProfileProvider
 
 analyst = Agent(
     name="analyst",

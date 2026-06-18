@@ -31,8 +31,8 @@ A simpler, agentic version of [MediaPulse](https://github.com/hyperjumptech/medi
 | `OPENAI_BASE_URL`         | Leave blank for OpenAI, or point to an OpenAI-compatible gateway      | Yes          |
 | `OPENAI_MODEL`            | Default model for every agent (e.g. `gpt-4.1-mini`)                   | Yes          |
 | `SERPER_API_KEY`          | Serper key (serper.dev) for news search and page scraping             | Yes          |
-| `REDIS_URL`               | Subject-memory store — default `redis://localhost:6379/0`             | Yes          |
 | `MEDIAPULSE_DATABASE_URL` | Postgres connection string (read-only)                                | Yes          |
+| `DATABASE_URL`            | App Postgres (read-write): archived newsletters and agent memory      | No           |
 | `RESEND_API_KEY`          | Resend key for email delivery                                         | Yes          |
 | `EMAIL_FROM`              | Sender address, e.g. `MediaPulse <hello@example.com>`                 | Yes          |
 | `SECRET_KEY`              | Required on every API request (`X-API-Key` header)                    | Yes          |

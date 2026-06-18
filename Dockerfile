@@ -18,7 +18,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
-COPY --from=template-builder /build/src/templates/ src/templates/
+COPY --from=template-builder /build/src/emails/templates/ src/emails/templates/
 
 RUN useradd --no-create-home --shell /bin/false app \
     && chown -R app:app /app

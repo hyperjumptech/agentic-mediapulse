@@ -14,6 +14,7 @@ def send_email(to: str | list[str], subject: str, html: str, text: str | None = 
         "subject": subject,
         "html": html,
     }
+
     if text:
         payload["text"] = text
 

@@ -1,4 +1,4 @@
-import utils.email_template as email_template
+import emails.templates.newsletter as email_template
 
 _MARKDOWN = (
     "# ACME Pulse: Big Week\n\nA strong week for ACME.\n\n"
@@ -38,7 +38,7 @@ def test_parse_defaults_title_when_missing():
 
 
 def test_render_returns_subject_html_and_text():
-    out = email_template.render_newsletter_email(_MARKDOWN, subject_symbol="ACME")
+    out = email_template.render_newsletter_email(_MARKDOWN, ticker="ACME")
     assert out["subject"] == "ACME Pulse: Big Week"
     assert 'href="https://x.com/acme-funding-news"' in out["html"]
     assert "Read: Funding" in out["html"]
@@ -52,9 +52,7 @@ def test_render_skips_sections_without_items():
 
 
 def test_render_includes_unsubscribe_link_when_url_given():
-    out = email_template.render_newsletter_email(
-        _MARKDOWN, subject_symbol="ACME", unsubscribe_url="https://x.com/unsub"
-    )
+    out = email_template.render_newsletter_email(_MARKDOWN, ticker="ACME", unsubscribe_url="https://x.com/unsub")
     assert 'href="https://x.com/unsub"' in out["html"]
     assert "Unsubscribe from ACME updates" in out["html"]
 
@@ -62,3 +60,21 @@ def test_render_includes_unsubscribe_link_when_url_given():
 def test_render_uses_generic_footer_without_subject():
     out = email_template.render_newsletter_email(_MARKDOWN)
     assert "subscribed to updates" in out["text"]
+
+
+def test_newsletter_sources_extracts_cited_urls():
+    assert email_template.newsletter_sources(_MARKDOWN) == ["https://x.com/acme-funding-news"]
+
+
+def test_newsletter_sources_dedupes_and_preserves_order():
+    markdown = (
+        "# T\n\n## A\n"
+        "one [Read: a](https://x.com/1)\n\n---\n"
+        "two [Read: b](https://x.com/2)\n\n---\n"
+        "three [Read: c](https://x.com/1)\n"
+    )
+    assert email_template.newsletter_sources(markdown) == ["https://x.com/1", "https://x.com/2"]
+
+
+def test_newsletter_sources_empty_without_links():
+    assert email_template.newsletter_sources("# Title\n\nNo links here.") == []

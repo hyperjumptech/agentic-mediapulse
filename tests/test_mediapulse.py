@@ -1,4 +1,4 @@
-import utils.db as db
+import db.mediapulse as mediapulse
 
 
 class FakeCursor:
@@ -36,28 +36,28 @@ class FakeConn:
 
 def test_conninfo_drops_prisma_schema_query(monkeypatch):
     monkeypatch.setenv("MEDIAPULSE_DATABASE_URL", "postgres://u:p@h/db?schema=mediapulse")
-    assert db._conninfo() == "postgres://u:p@h/db"
+    assert mediapulse._conninfo() == "postgres://u:p@h/db"
 
 
 def test_clean_collapses_whitespace_and_trims_punctuation():
-    assert db._clean("  multi\nline\r value ,- ") == "multi line value"
-    assert db._clean(None) == ""
+    assert mediapulse._clean("  multi\nline\r value ,- ") == "multi line value"
+    assert mediapulse._clean(None) == ""
 
 
 def test_fetch_ticker_profile_none_without_env(monkeypatch):
     monkeypatch.delenv("MEDIAPULSE_DATABASE_URL", raising=False)
-    assert db.fetch_ticker_profile("ACME") is None
+    assert mediapulse.fetch_ticker_profile("ACME") is None
 
 
-def test_fetch_ticker_profile_none_for_blank_symbol(monkeypatch):
+def test_fetch_ticker_profile_none_for_blank_ticker(monkeypatch):
     monkeypatch.setenv("MEDIAPULSE_DATABASE_URL", "postgres://u:p@h/db")
-    assert db.fetch_ticker_profile("   ") is None
+    assert mediapulse.fetch_ticker_profile("   ") is None
 
 
-def test_fetch_ticker_profile_none_when_symbol_not_listed(monkeypatch):
+def test_fetch_ticker_profile_none_when_ticker_not_listed(monkeypatch):
     monkeypatch.setenv("MEDIAPULSE_DATABASE_URL", "postgres://u:p@h/db")
-    monkeypatch.setattr(db.psycopg, "connect", lambda *a, **k: FakeConn(None))
-    assert db.fetch_ticker_profile("ACME") is None
+    monkeypatch.setattr(mediapulse.psycopg, "connect", lambda *a, **k: FakeConn(None))
+    assert mediapulse.fetch_ticker_profile("ACME") is None
 
 
 def test_fetch_ticker_profile_shapes_metadata(monkeypatch):
@@ -70,9 +70,9 @@ def test_fetch_ticker_profile_shapes_metadata(monkeypatch):
         "TanggalPencatatan": "2000-05-31T00:00:00.000Z",
         "Website": "https://example.com",
     }
-    monkeypatch.setattr(db.psycopg, "connect", lambda *a, **k: FakeConn(("Acme Sample Corp", metadata)))
+    monkeypatch.setattr(mediapulse.psycopg, "connect", lambda *a, **k: FakeConn(("Acme Sample Corp", metadata)))
 
-    profile = db.fetch_ticker_profile("acme")
+    profile = mediapulse.fetch_ticker_profile("acme")
     assert profile["Company"] == "Acme Sample Corp"
     assert profile["Sector"] == "Technology"
     assert "Sub-sector" not in profile  # duplicate "Technology" value dropped
@@ -84,6 +84,6 @@ def test_fetch_ticker_profile_shapes_metadata(monkeypatch):
 
 def test_fetch_ticker_profile_handles_missing_metadata(monkeypatch):
     monkeypatch.setenv("MEDIAPULSE_DATABASE_URL", "postgres://u:p@h/db")
-    monkeypatch.setattr(db.psycopg, "connect", lambda *a, **k: FakeConn(("Solo Name", None)))
-    profile = db.fetch_ticker_profile("SOLO")
+    monkeypatch.setattr(mediapulse.psycopg, "connect", lambda *a, **k: FakeConn(("Solo Name", None)))
+    profile = mediapulse.fetch_ticker_profile("SOLO")
     assert profile == {"Company": "Solo Name"}

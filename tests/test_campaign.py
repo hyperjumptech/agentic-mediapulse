@@ -2,10 +2,11 @@ import agents.campaign as campaign
 
 
 def _patch_pipeline(monkeypatch, *, fail_for=()):
-    async def fake_run_newsletter(symbol):
-        if symbol in fail_for:
-            raise RuntimeError(f"boom {symbol}")
-        return f"# {symbol} markdown"
+    async def fake_run_newsletter(ticker):
+        if ticker in fail_for:
+            raise RuntimeError(f"boom {ticker}")
+
+        return f"# {ticker} markdown"
 
     sent = []
 
@@ -21,9 +22,9 @@ def _patch_pipeline(monkeypatch, *, fail_for=()):
 
 def _subs():
     return [
-        {"email": "a@x.com", "symbol": "ACME"},
-        {"email": "b@x.com", "symbol": "ACME"},
-        {"email": "c@x.com", "symbol": "GLOBEX"},
+        {"email": "a@x.com", "ticker": "ACME"},
+        {"email": "b@x.com", "ticker": "ACME"},
+        {"email": "c@x.com", "ticker": "GLOBEX"},
     ]
 
 
@@ -52,15 +53,33 @@ async def test_failed_ticker_is_skipped_others_delivered(monkeypatch):
     _patch_pipeline(monkeypatch, fail_for={"ACME"})
     result = await campaign.run_campaign(subscriptions=_subs(), send=False, log=lambda *a: None)
 
-    delivered_symbols = {entry["symbol"] for entry in result["delivered"]}
-    assert delivered_symbols == {"GLOBEX"}
+    delivered_tickers = {entry["ticker"] for entry in result["delivered"]}
+    assert delivered_tickers == {"GLOBEX"}
 
 
 async def test_run_campaign_fetches_subscriptions_when_unset(monkeypatch):
     _patch_pipeline(monkeypatch)
-    monkeypatch.setattr(campaign, "fetch_subscriptions", lambda: [{"email": "z@x.com", "symbol": "ACME"}])
+    monkeypatch.setattr(campaign, "fetch_subscriptions", lambda: [{"email": "z@x.com", "ticker": "ACME"}])
 
     result = await campaign.run_campaign(send=False, log=lambda *a: None)
 
     assert result["tickers"] == ["ACME"]
-    assert result["delivered"] == [{"email": "z@x.com", "symbol": "ACME"}]
+    assert result["delivered"] == [{"email": "z@x.com", "ticker": "ACME"}]
+
+
+async def test_each_ticker_is_saved_once_with_ticker_and_sources(monkeypatch):
+    _patch_pipeline(monkeypatch)
+    saved = []
+
+    def fake_save(subject, markdown, metadata):
+        saved.append((subject, metadata))
+
+    monkeypatch.setattr(campaign, "save_newsletter", fake_save)
+
+    await campaign.run_campaign(subscriptions=_subs(), send=False, log=lambda *a: None)
+
+    assert sorted(subject for subject, _meta in saved) == ["ACME", "GLOBEX"]  # once per unique ticker
+
+    for _subject, metadata in saved:
+        assert metadata["ticker"] in {"ACME", "GLOBEX"}
+        assert isinstance(metadata["sources"], list)
