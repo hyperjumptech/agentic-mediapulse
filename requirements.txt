@@ -3,5 +3,6 @@ python-dotenv
 httpx
 psycopg[binary]
 sqlmodel
+alembic
 fastapi
 uvicorn

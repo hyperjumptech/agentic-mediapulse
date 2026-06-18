@@ -1,7 +1,7 @@
 import pytest
 from agent_framework import AgentResponse, Message, MiddlewareTermination
 
-import utils.guardrails as guardrails
+import agents.runtime.guardrails as guardrails
 
 
 class Msg:

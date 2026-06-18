@@ -7,8 +7,8 @@ from agents.beats import BEATS
 from agents.editor import editor
 from agents.managing_editor import managing_editor
 from agents.reviewer import reviewer
+from agents.sections import SECTIONS
 from db.memory import remember_subject
-from utils.sections import SECTIONS
 
 _URL_RE = re.compile(r"https?://[^\s\)]+")
 _READ_RE = re.compile(r"\[Read:[^\]]*\]\(([^)]*)\)")

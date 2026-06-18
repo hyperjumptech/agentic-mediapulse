@@ -1,14 +1,15 @@
 from agent_framework import Agent
 
+from agents.runtime.chat_client import SKILLS, chat_client
+from agents.runtime.guardrails import EnforceCitations, SourceRegistry
+from agents.runtime.make_agent import make_agent
+from agents.sections import Section
 from agents.tools import web_fetch
-from utils.client import SKILLS, chat_client
-from utils.guardrails import EnforceCitations, SourceRegistry
-from utils.sections import Section
 
 
 def make_writer(section: Section, registry: SourceRegistry) -> Agent:
     """Writes one beat's section from the researcher's candidate articles."""
-    return Agent(
+    return make_agent(
         name=f"writer_{section.slug}",
         description=f"Writes the {section.name} section from researched sources.",
         client=chat_client("writer"),

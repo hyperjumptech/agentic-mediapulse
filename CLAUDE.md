@@ -8,16 +8,16 @@ Guidance for working in this repository.
 
 ## Layout
 
-All application code lives under `src/`. Packages keep their top-level names (`agents`, `db`, `utils`), so imports are `from agents...` / `from db...` / `from utils...`, with `src` on the path (pytest sets `pythonpath = ["src"]`; the Docker image runs uvicorn with `--app-dir src`). Run entrypoints from the repo root so `load_dotenv()` finds `.env`.
+All application code lives under `src/`. Packages keep their top-level names (`agents`, `db`, `emails`), so imports are `from agents...` / `from db...` / `from emails...`, with `src` on the path (pytest sets `pythonpath = ["src"]`; the Docker image runs uvicorn with `--app-dir src`). Run entrypoints from the repo root so `load_dotenv()` finds `.env`.
 
 - `src/api.py` — FastAPI service. `POST /run` (full campaign) and `POST /test` (one user). Both run in the background, return `202`, and default to dry-run. Auth via the `X-API-Key` header matched against `SECRET_KEY`.
 - `src/app.py` — local CLI mirroring the API (`run`, `test`), for testing without HTTP.
 - `src/agents/orchestrator.py` — the pipeline: analyst → 5 parallel beat desks (researcher → writer → editor) → managing-editor gap roundtable → masthead → reviewer → deterministic clean/assemble/dedupe. Most non-agent logic (citation gating, URL/article validation, dedupe, subject-name canonicalization, prose humanizing) lives here.
-- `src/agents/` — one module per agent (`analyst`, `researcher`, `writer`, `editor`, `managing_editor`, `reviewer`), plus `beats.py` (beat desks), `campaign.py` (top-level run over subscriptions), `providers/` (subject-memory and ticker-profile context providers), and `tools/` (Serper search, web fetch).
+- `src/agents/` — one module per agent (`analyst`, `researcher`, `writer`, `editor`, `managing_editor`, `reviewer`), plus `beats.py` (beat desks), `campaign.py` (top-level run over subscriptions), `sections.py` (the five editorial beats), `providers/` (subject-memory and ticker-profile context providers), and `tools/` (Serper search, web fetch).
+- `src/agents/runtime/` — agent plumbing shared by every agent: `chat_client.py` (per-role chat client plus the `SKILLS` provider), `make_agent.py` (the factory that wires generic activity tracking into every agent), `guardrails.py` (guardrail/citation middleware), and `tracking.py` (the generic `ActivityTracker`/`ToolTracker` middleware, `newsletter_scope`, and run context vars). New agents are built via `make_agent(...)` so tracking is automatic.
 - `src/agents/skills/` — `SKILL.md` files that control agent behavior (`subject-profile`, `section-research`, `newsletter-format`). Prefer editing these over code when changing how agents research or write.
-- `src/db/` — all database access. `mediapulse.py` reads subscriptions and ticker profiles from the upstream MediaPulse Postgres (`MEDIAPULSE_DATABASE_URL`, read-only, raw psycopg). The app's own Postgres (`DATABASE_URL`, SQLModel) uses `engine.py` for the shared engine, with each table's model alongside its operations in `newsletters.py` (archives each generated newsletter as markdown plus JSONB metadata) and `memory.py` (subject-brief agent memory). Tables are auto-created on first write.
+- `src/db/` — all database access. `mediapulse.py` reads subscriptions and ticker profiles from the upstream MediaPulse Postgres (`MEDIAPULSE_DATABASE_URL`, read-only, raw psycopg). The app's own Postgres (`DATABASE_URL`, SQLModel) uses `engine.py` for the shared engine, with each table's model alongside its operations: `newsletters.py` (archives each newsletter as markdown plus JSONB metadata, with a `pending`/`complete`/`failed` lifecycle via `create_newsletter`/`finalize_newsletter`), `memory.py` (subject-brief agent memory), and `agent_activity.py` (one row per agent run and tool call, tied to its `newsletter_id`, recording status, duration, model, and token usage). The schema is owned by Alembic migrations, not `create_all` (see Migrations).
 - `src/emails/` — everything email-related. `mailer.py` sends via Resend. `templates/` pairs each template's renderer with its tokenized HTML: `templates/newsletter.py` parses the newsletter markdown and fills `templates/newsletter.html` (the gitignored build artifact from `email-playground`).
-- `src/utils/` — `client.py`, `guardrails.py`, `sections.py`.
 - `email-playground/` — a standalone React Email (TypeScript) project that is the visual source-of-truth for MediaPulse email templates (the newsletter is the first one). `npm run build:templates` renders each template to a tokenized `src/emails/templates/<name>.html` that the Python side consumes (`emails/templates/newsletter.py` for the newsletter). Those HTML files are gitignored build artifacts, regenerated fresh in CI and the Docker build. Restyle emails there, not in Python. See `email-playground/README.md`.
 - `tests/` — pytest suite covering the deterministic logic (see Testing below).
 
@@ -38,6 +38,19 @@ python src/app.py run --send                        # email all subscribers
 python src/app.py test --email=you@example.com      # dry-run one user
 python src/api.py                                    # serve at http://localhost:8000 (docs at /docs)
 ```
+
+## Migrations
+
+The app's own Postgres schema (`DATABASE_URL`) is managed by Alembic, not `create_all`. Migrations live in `alembic/versions/`; `alembic/env.py` puts `src` on the path, loads `.env`, resolves `DATABASE_URL` (reusing `db.engine._engine_url`), and targets `SQLModel.metadata`.
+
+```
+alembic upgrade head                                  # apply pending migrations
+alembic revision -m "add X"                            # new (hand-written) migration
+alembic revision --autogenerate -m "add X"            # diff models vs DB, needs a live DATABASE_URL
+alembic downgrade -1                                   # roll back one
+```
+
+The Docker image runs `alembic upgrade head` on container start via `docker-entrypoint.sh`, then execs the `CMD`. It is skipped when `DATABASE_URL` is unset or `RUN_MIGRATIONS=0`. To run migrations as a standalone release job with the same image: `docker run -e RUN_MIGRATIONS=0 <image> alembic upgrade head`. After changing a SQLModel table, add a migration in the same change so deploys stay in sync.
 
 ## Code quality
 
@@ -67,7 +80,7 @@ cd email-playground && npm install && npm run build:templates
 
 Config is in `pyproject.toml` under `[tool.pytest.ini_options]`: `pythonpath = ["src"]`, `testpaths = ["tests"]`, `asyncio_mode = "auto"` (async tests need no decorator). CI runs `pytest` in a separate `tests` job after installing both requirement files.
 
-The suite covers the deterministic logic, not the LLM agents: orchestrator text/section helpers, the email template, Serper tools, the MediaPulse profile shaping, the newsletter store and subject-memory upsert, guardrail middleware, the subject-memory and ticker-profile context providers, the mailer, the client model resolution, and the campaign delivery flow. Conventions for new tests:
+The suite covers the deterministic logic, not the LLM agents: orchestrator text/section helpers, the email template, Serper tools, the MediaPulse profile shaping, the newsletter store and lifecycle and subject-memory upsert, the agent-activity store, the guardrail and activity-tracking middleware, the subject-memory and ticker-profile context providers, the mailer, the client model resolution, and the campaign delivery flow. Conventions for new tests:
 
 - `tests/conftest.py` sets dummy credentials before collection, because importing the agent modules constructs the whole agent graph at import time.
 - Every external call (httpx, psycopg, the LLM clients) is monkeypatched, and the SQLModel store is exercised against in-memory SQLite. The suite is fully offline. A test that reaches the network is a test bug.

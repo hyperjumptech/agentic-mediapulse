@@ -10,5 +10,6 @@ dependencies:
       - httpx
       - psycopg[binary]
       - sqlmodel
+      - alembic
       - fastapi
       - uvicorn

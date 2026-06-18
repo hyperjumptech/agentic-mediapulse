@@ -1,12 +1,11 @@
-from agent_framework import Agent
-
 from agents.providers.memory import SubjectMemoryProvider
 from agents.providers.ticker import TickerProfileProvider
+from agents.runtime.chat_client import SKILLS, chat_client
+from agents.runtime.guardrails import SubjectGuardrail
+from agents.runtime.make_agent import make_agent
 from agents.tools import search, web_fetch
-from utils.client import SKILLS, chat_client
-from utils.guardrails import SubjectGuardrail
 
-analyst = Agent(
+analyst = make_agent(
     name="analyst",
     description="Resolves a subject into a research brief.",
     client=chat_client("analyst"),

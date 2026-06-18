@@ -2,8 +2,9 @@ import asyncio
 import time
 
 from agents.orchestrator import run_newsletter
+from agents.runtime.tracking import newsletter_scope
 from db.mediapulse import fetch_subscriptions
-from db.newsletters import save_newsletter
+from db.newsletters import create_newsletter, finalize_newsletter
 from emails.mailer import send_email
 from emails.templates.newsletter import newsletter_sources, render_newsletter_email
 
@@ -29,10 +30,12 @@ async def run_campaign(*, subscriptions: list[dict] | None = None, send: bool = 
     last_send = 0.0
     delivered: list[dict] = []
 
-    async def deliver(ticker: str, recipients: list[dict], markdown: str) -> None:
+    async def deliver(ticker: str, recipients: list[dict], markdown: str, newsletter_id: int | None) -> None:
         nonlocal last_send
         email = render_newsletter_email(markdown, ticker=ticker)
-        save_newsletter(ticker, markdown, {"ticker": ticker, "sources": newsletter_sources(markdown)})
+        finalize_newsletter(
+            newsletter_id, content=markdown, metadata={"ticker": ticker, "sources": newsletter_sources(markdown)}
+        )
 
         for subscription in recipients:
             if send:
@@ -53,19 +56,23 @@ async def run_campaign(*, subscriptions: list[dict] | None = None, send: bool = 
             delivered.append({"email": subscription["email"], "ticker": ticker})
 
     async def process(ticker: str, recipients: list[dict]) -> None:
-        async with generate_semaphore:
-            log(f"generating {ticker} ...")
+        newsletter_id = create_newsletter(ticker)
 
-            try:
-                markdown = await run_newsletter(ticker)
-            except Exception as error:
-                log(f"failed {ticker}: {error}")
+        with newsletter_scope(newsletter_id):
+            async with generate_semaphore:
+                log(f"generating {ticker} ...")
 
-                return
+                try:
+                    markdown = await run_newsletter(ticker)
+                except Exception as error:
+                    finalize_newsletter(newsletter_id, status="failed")
+                    log(f"failed {ticker}: {error}")
 
-            log(f"done {ticker}")
+                    return
 
-        await deliver(ticker, recipients, markdown)
+                log(f"done {ticker}")
+
+            await deliver(ticker, recipients, markdown, newsletter_id)
 
     await asyncio.gather(*(process(ticker, recipients) for ticker, recipients in subscribers_by_ticker.items()))
 
