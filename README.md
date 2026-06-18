@@ -1,6 +1,6 @@
 # agentic-mediapulse
 
-A simpler, agentic version of [Mediapulse](https://github.com/hyperjumptech/mediapulse). Give it a subject — a stock ticker, a company name, or an industry theme — and a newsroom of focused agents researches, writes, and edits a locale-aware briefing across five editorial sections, with every claim traced to a real source.
+A simpler, agentic version of [MediaPulse](https://github.com/hyperjumptech/mediapulse). Give it a subject — a stock ticker, a company name, or an industry theme — and a newsroom of focused agents researches, writes, and edits a locale-aware briefing across five editorial sections, with every claim traced to a real source.
 
 ## Setup
 
@@ -34,7 +34,7 @@ A simpler, agentic version of [Mediapulse](https://github.com/hyperjumptech/medi
 | `REDIS_URL`               | Subject-memory store — default `redis://localhost:6379/0`             | Yes          |
 | `MEDIAPULSE_DATABASE_URL` | Postgres connection string (read-only)                                | Yes          |
 | `RESEND_API_KEY`          | Resend key for email delivery                                         | Yes          |
-| `EMAIL_FROM`              | Sender address, e.g. `Mediapulse <hello@example.com>`                 | Yes          |
+| `EMAIL_FROM`              | Sender address, e.g. `MediaPulse <hello@example.com>`                 | Yes          |
 | `SECRET_KEY`              | Required on every API request (`X-API-Key` header)                    | Yes          |
 | `ANALYST_MODEL`           | Model override for the analyst — falls back to `OPENAI_MODEL`         | No           |
 | `RESEARCHER_MODEL`        | Model override for the researcher — falls back to `OPENAI_MODEL`      | No           |
@@ -120,4 +120,4 @@ To change how an agent writes or researches, edit its skill file in `src/agents/
 
 ## Database
 
-Subscriptions and ticker data are read from the [Mediapulse](https://github.com/hyperjumptech/mediapulse) database. Set `MEDIAPULSE_DATABASE_URL` to your Mediapulse Postgres connection string — the schema is defined in that repo.
+Subscriptions and ticker data are read from the [MediaPulse](https://github.com/hyperjumptech/mediapulse) database. Set `MEDIAPULSE_DATABASE_URL` to your MediaPulse Postgres connection string — the schema is defined in that repo.

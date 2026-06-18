@@ -25,3 +25,10 @@ env/
 .vscode/
 
 .subject_cache.json
+
+# Generated email templates (built from email-playground, fresh each deploy/CI run)
+/src/templates/*.html
+
+# Node (email-playground)
+node_modules/
+.react-email/

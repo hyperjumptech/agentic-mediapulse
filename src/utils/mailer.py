@@ -9,7 +9,7 @@ def send_email(to: str | list[str], subject: str, html: str, text: str | None = 
     Reads `RESEND_API_KEY` and the sender from `EMAIL_FROM`. Returns the Resend response JSON.
     """
     payload: dict = {
-        "from": os.getenv("EMAIL_FROM", "Mediapulse <onboarding@resend.dev>"),
+        "from": os.getenv("EMAIL_FROM", "MediaPulse <onboarding@resend.dev>"),
         "to": [to] if isinstance(to, str) else to,
         "subject": subject,
         "html": html,
