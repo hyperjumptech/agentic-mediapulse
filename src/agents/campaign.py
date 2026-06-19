@@ -6,7 +6,7 @@ from agents.runtime.tracking import newsletter_scope
 from db.mediapulse import fetch_subscriptions
 from db.newsletters import create_newsletter, finalize_newsletter
 from emails.mailer import send_email
-from emails.templates.newsletter import newsletter_sources, render_newsletter_email
+from emails.templates.newsletter import has_sections, newsletter_sources, render_newsletter_email
 
 CONCURRENCY = 3
 SEND_INTERVAL = 1.0  # seconds between emails
@@ -32,6 +32,15 @@ async def run_campaign(*, subscriptions: list[dict] | None = None, send: bool = 
 
     async def deliver(ticker: str, recipients: list[dict], markdown: str, newsletter_id: int | None) -> None:
         nonlocal last_send
+
+        if not has_sections(markdown):
+            finalize_newsletter(
+                newsletter_id, content=markdown, metadata={"ticker": ticker, "sources": []}, status="failed"
+            )
+            log(f"skipped {ticker}: newsletter has no sections, not sending")
+
+            return
+
         email = render_newsletter_email(markdown, ticker=ticker)
         finalize_newsletter(
             newsletter_id, content=markdown, metadata={"ticker": ticker, "sources": newsletter_sources(markdown)}

@@ -15,7 +15,7 @@ Research one newsletter beat, find the strongest recent articles, and output the
 ## Search instructions
 
 1. Build simple queries: the subject's short common name on its own first, then add at most one topic word to narrow if needed. Never use long multi-keyword queries, `site:` operators, or mixed-language queries — they return nothing.
-2. Call `search` with kind="news" first; use kind="web" only for background. Always pass the `gl` and `hl` codes from the brief's Locale line. Searches default to the past week; widen to recency="month" if results are thin, narrow to recency="day" for breaking news.
+2. Call `web_search` with kind="news" first; use kind="web" only for background. Always pass the `gl` and `hl` codes from the brief's Locale line. Searches default to the past week; widen to recency="month" if results are thin, narrow to recency="day" for breaking news.
 3. Keep the subject the lead: most items should be about it. You may cover named competitors and industry context secondarily, but only from the subject's home market.
 4. Select the strongest, most relevant recent items — at least 2, at most 5. Prefer substantive developments: products, strategy, expansion, deals, regulation, technology, operations, leadership. Skip stock-index roundups (IHSG levels), "top gainers/losers", analyst price targets, and technical analysis unless a price move is itself the news. Never invent an article or URL.
 

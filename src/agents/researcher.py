@@ -4,7 +4,7 @@ from agents.runtime.chat_client import SKILLS, chat_client
 from agents.runtime.guardrails import RecordSources, SourceRegistry
 from agents.runtime.make_agent import make_agent
 from agents.sections import Section
-from agents.tools import search
+from agents.tools import web_search
 
 
 def make_researcher(section: Section, registry: SourceRegistry) -> Agent:
@@ -20,7 +20,7 @@ def make_researcher(section: Section, registry: SourceRegistry) -> Agent:
             "matters, written in English. The writer needs at least 2 and up to 5 strong, distinct stories. "
             "You may query in the subject's local language. Never invent a URL. Output only the list, no preamble."
         ),
-        tools=[search],
+        tools=[web_search],
         context_providers=[SKILLS],
         middleware=[RecordSources(registry)],
     )

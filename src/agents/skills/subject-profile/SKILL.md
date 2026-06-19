@@ -13,7 +13,7 @@ The subject string the user provided. If verified exchange listing details are a
 
 ## Instructions
 
-1. If the subject is not obvious and no verified listing details are provided, call `search` (kind="web" or kind="news", recency="") to confirm what it is.
+1. If the subject is not obvious and no verified listing details are provided, call `web_search` (kind="web" or kind="news", recency="") to confirm what it is.
 2. Output a compact brief using exactly the labelled lines in the Output section below — nothing else.
 
 ## Output
