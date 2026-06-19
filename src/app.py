@@ -5,8 +5,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from agents.campaign import run_campaign
 from db.mediapulse import fetch_subscriptions
+from newsroom.campaign import run_campaign
 
 
 def main() -> None:

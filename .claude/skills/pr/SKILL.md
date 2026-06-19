@@ -33,7 +33,7 @@ Fix anything that fails and re-run until all three are clean. Do not push hoping
 
 ### 3. Push the branch
 
-If you are on `main`, create a feature branch first (`git switch -c <type>/<short-name>`, e.g. `feat/email-retry`). Commit pending changes, then:
+If you are on `main`, create a feature branch first (`git switch -c <type>/<short-name>`, e.g. `feat/email-retry`). Commit pending changes with a one-line subject only, do not write a commit description body. Then:
 
 ```bash
 git push -u origin HEAD
@@ -78,7 +78,7 @@ gh issue view "$ISSUE_NUM" --repo hyperjumptech/agentic-mediapulse --json state 
 
 ### 5. Open the PR
 
-Write the body to a temp file, then create the PR. Keep the prose plain and human: no em dashes, no semicolons, no filler.
+Write the body to a temp file, then create the PR. The title names one specific change, do not join multiple changes with "and". Keep the prose plain and human: no em dashes, no semicolons, no filler. Do not hard-wrap the text, write each paragraph as a single continuous line and let it soft-wrap.
 
 ```bash
 BODY_FILE="$(mktemp "${TMPDIR:-/tmp}/gh-pr.XXXXXX")"
@@ -103,7 +103,7 @@ Closes #<ISSUE_NUM>
 2. The expected result.
 EOF
 gh pr create --repo hyperjumptech/agentic-mediapulse --base main \
-  --title "Verb-first title, no trailing period" --body-file "$BODY_FILE"
+  --title "Verb-first title naming one specific change, no trailing period" --body-file "$BODY_FILE"
 ```
 
 Use `Closes #N` when the PR finishes the issue, or `Refs #N` to link without closing. Capture the PR number:

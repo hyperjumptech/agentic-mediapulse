@@ -8,8 +8,8 @@ load_dotenv()
 
 from fastapi import BackgroundTasks, Depends, FastAPI, Header, HTTPException
 
-from agents.campaign import run_campaign
 from db.mediapulse import fetch_subscriptions
+from newsroom.campaign import run_campaign
 
 logging.basicConfig(level=logging.INFO)
 app = FastAPI(title="MediaPulse Newsletter API")

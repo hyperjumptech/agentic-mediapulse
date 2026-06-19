@@ -1,12 +1,13 @@
 import asyncio
 import time
 
-from agents.orchestrator import run_newsletter
 from agents.runtime.tracking import newsletter_scope
 from db.mediapulse import fetch_subscriptions
 from db.newsletters import create_newsletter, finalize_newsletter
 from emails.mailer import send_email
 from emails.templates.newsletter import has_sections, newsletter_sources, render_newsletter_email
+from newsroom.orchestrator import run_newsletter
+from newsroom.translation import store_translations
 
 CONCURRENCY = 3
 SEND_INTERVAL = 1.0  # seconds between emails
@@ -82,6 +83,12 @@ async def run_campaign(*, subscriptions: list[dict] | None = None, send: bool = 
                 log(f"done {ticker}")
 
             await deliver(ticker, recipients, markdown, newsletter_id)
+
+            if has_sections(markdown):
+                try:
+                    await store_translations(newsletter_id, markdown, ticker=ticker, log=log)
+                except Exception as error:
+                    log(f"translations failed {ticker}: {error}")
 
     await asyncio.gather(*(process(ticker, recipients) for ticker, recipients in subscribers_by_ticker.items()))
 
