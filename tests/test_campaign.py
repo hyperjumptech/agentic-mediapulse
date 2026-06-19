@@ -1,4 +1,4 @@
-import agents.campaign as campaign
+import newsroom.campaign as campaign
 
 
 def _patch_pipeline(monkeypatch, *, fail_for=(), empty_for=()):
@@ -77,7 +77,7 @@ async def test_each_ticker_is_finalized_once_with_ticker_and_sources(monkeypatch
     _patch_pipeline(monkeypatch)
     finalized = []
 
-    def fake_finalize(newsletter_id, *, content=None, metadata=None, status="complete"):
+    def fake_finalize(newsletter_id, *, content=None, metadata=None, status="completed"):
         finalized.append((metadata, status))
 
     monkeypatch.setattr(campaign, "create_newsletter", lambda subject: 1)
@@ -97,7 +97,7 @@ async def test_failed_ticker_is_finalized_as_failed(monkeypatch):
     _patch_pipeline(monkeypatch, fail_for={"ACME"})
     finalized = []
 
-    def fake_finalize(newsletter_id, *, content=None, metadata=None, status="complete"):
+    def fake_finalize(newsletter_id, *, content=None, metadata=None, status="completed"):
         finalized.append(status)
 
     monkeypatch.setattr(campaign, "create_newsletter", lambda subject: 1)
@@ -106,4 +106,51 @@ async def test_failed_ticker_is_finalized_as_failed(monkeypatch):
     await campaign.run_campaign(subscriptions=_subs(), send=False, log=lambda *a: None)
 
     assert "failed" in finalized  # the ACME run was marked failed
-    assert "complete" in finalized  # GLOBEX still completed
+    assert "completed" in finalized  # GLOBEX still completed
+
+
+async def test_store_translations_called_for_delivered_tickers(monkeypatch):
+    _patch_pipeline(monkeypatch)
+    translated = []
+
+    async def fake_store(newsletter_id, markdown, *, ticker, log):
+        translated.append(ticker)
+
+    monkeypatch.setattr(campaign, "create_newsletter", lambda subject: 1)
+    monkeypatch.setattr(campaign, "finalize_newsletter", lambda *a, **k: None)
+    monkeypatch.setattr(campaign, "store_translations", fake_store)
+
+    await campaign.run_campaign(subscriptions=_subs(), send=False, log=lambda *a: None)
+
+    assert sorted(translated) == ["ACME", "GLOBEX"]  # once per delivered ticker
+
+
+async def test_store_translations_skipped_for_failed_and_empty(monkeypatch):
+    _patch_pipeline(monkeypatch, fail_for={"ACME"}, empty_for={"GLOBEX"})
+    translated = []
+
+    async def fake_store(newsletter_id, markdown, *, ticker, log):
+        translated.append(ticker)
+
+    monkeypatch.setattr(campaign, "create_newsletter", lambda subject: 1)
+    monkeypatch.setattr(campaign, "finalize_newsletter", lambda *a, **k: None)
+    monkeypatch.setattr(campaign, "store_translations", fake_store)
+
+    await campaign.run_campaign(subscriptions=_subs(), send=False, log=lambda *a: None)
+
+    assert translated == []  # ACME raised, GLOBEX had no sections
+
+
+async def test_store_translations_failure_does_not_break_delivery(monkeypatch):
+    _patch_pipeline(monkeypatch)
+
+    async def boom(*a, **k):
+        raise RuntimeError("translate down")
+
+    monkeypatch.setattr(campaign, "create_newsletter", lambda subject: 1)
+    monkeypatch.setattr(campaign, "finalize_newsletter", lambda *a, **k: None)
+    monkeypatch.setattr(campaign, "store_translations", boom)
+
+    result = await campaign.run_campaign(subscriptions=_subs(), send=False, log=lambda *a: None)
+
+    assert len(result["delivered"]) == 3  # translation failure never blocks the English send

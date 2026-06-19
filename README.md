@@ -28,11 +28,16 @@ A simpler, agentic version of [MediaPulse](https://github.com/hyperjumptech/medi
 | Variable                  | Description                                                           | Is Required? |
 | ------------------------- | --------------------------------------------------------------------- | ------------ |
 | `OPENAI_API_KEY`          | Your API key                                                          | Yes          |
-| `OPENAI_BASE_URL`         | Leave blank for OpenAI, or point to an OpenAI-compatible gateway      | Yes          |
-| `OPENAI_MODEL`            | Default model for every agent (e.g. `gpt-4.1-mini`)                   | Yes          |
-| `SERPER_API_KEY`          | Serper key (serper.dev) for news search and page scraping             | Yes          |
+| `OPENAI_BASE_URL`         | Leave blank for OpenAI, or point to a gateway (e.g. OpenRouter)       | Yes          |
+| `OPENAI_MODEL`            | Default model for every agent (e.g. `google/gemini-3-flash-preview`) | Yes          |
+| `SERPER_API_KEY`          | Baseline web search and page-fetch provider (serper.dev)              | Yes          |
+| `EXA_API_KEY`             | Optional extra search and fetch provider (joins the round-robin)      | No           |
+| `TAVILY_API_KEY`          | Optional extra search and fetch provider (joins the round-robin)      | No           |
+| `FIRECRAWL_API_KEY`       | Optional extra page-fetch provider (joins the round-robin)            | No           |
+| `DIFFBOT_API_KEY`         | Optional extra page-fetch provider (joins the round-robin)            | No           |
 | `MEDIAPULSE_DATABASE_URL` | Postgres connection string (read-only)                                | Yes          |
 | `DATABASE_URL`            | App Postgres (read-write): archived newsletters and agent memory      | No           |
+| `NEWSLETTER_LANGUAGES`    | Comma-separated languages to also store translated, e.g. `Indonesian` | No           |
 | `RESEND_API_KEY`          | Resend key for email delivery                                         | Yes          |
 | `EMAIL_FROM`              | Sender address, e.g. `MediaPulse <hello@example.com>`                 | Yes          |
 | `SECRET_KEY`              | Required on every API request (`X-API-Key` header)                    | Yes          |
@@ -42,6 +47,9 @@ A simpler, agentic version of [MediaPulse](https://github.com/hyperjumptech/medi
 | `EDITOR_MODEL`            | Model override for the editor — falls back to `OPENAI_MODEL`          | No           |
 | `MANAGING_EDITOR_MODEL`   | Model override for the managing editor — falls back to `OPENAI_MODEL` | No           |
 | `REVIEWER_MODEL`          | Model override for the reviewer — falls back to `OPENAI_MODEL`        | No           |
+| `TRANSLATOR_MODEL`        | Model override for the translator, falls back to `OPENAI_MODEL`       | No           |
+
+Web search and page fetch run through a deterministic round-robin with failover across whichever providers have a key set. Serper is the baseline (search and fetch), Exa and Tavily add search and fetch, Firecrawl and Diffbot add fetch only.
 
 ## CLI
 
@@ -97,6 +105,8 @@ flowchart TD
     dedupe["⚙️ dedupe — deterministic"] --> out([newsletter])
 ```
 
+After the edition is assembled, each language in `NEWSLETTER_LANGUAGES` is translated from the finished English newsletter and stored (archived, not emailed).
+
 ### Agents
 
 | Agent               | Job                                                                                  |
@@ -107,6 +117,7 @@ flowchart TD
 | **editor**          | Reviews each section draft, then writes the edition title and summary                |
 | **managing_editor** | Gap-check roundtable after all beats finish — raises missing angles                  |
 | **reviewer**        | Final whole-edition quality pass before publishing                                   |
+| **translator**      | Translates the finished edition into each `NEWSLETTER_LANGUAGES`, stored not emailed |
 
 ### Skills
 
@@ -117,7 +128,10 @@ To change how an agent writes or researches, edit its skill file in `src/agents/
 | `subject-profile`   | How the analyst resolves a subject into a brief       |
 | `section-research`  | Search strategy, article selection, and summary style |
 | `newsletter-format` | Final layout, section order, and title/summary style  |
+| `translation`       | Tone and fidelity rules for translating an edition    |
 
 ## Database
 
 Subscriptions and ticker data are read from the [MediaPulse](https://github.com/hyperjumptech/mediapulse) database. Set `MEDIAPULSE_DATABASE_URL` to your MediaPulse Postgres connection string — the schema is defined in that repo.
+
+The app's own Postgres (`DATABASE_URL`) archives each generated newsletter and, when `NEWSLETTER_LANGUAGES` is set, its translated variants in `newsletter_translations`. Its schema (newsletters, translations, subject memory, and per-agent activity) is owned by Alembic migrations in `alembic/versions/`, applied with `alembic upgrade head` (the Docker image runs this on start).

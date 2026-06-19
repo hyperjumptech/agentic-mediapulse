@@ -69,7 +69,7 @@ def test_finalize_newsletter_fills_and_completes(monkeypatch):
     with Session(engine) as session:
         row = session.get(newsletters.Newsletter, newsletter_id)
 
-    assert row.status == "complete"
+    assert row.status == "completed"
     assert row.content == "# ACME Pulse"
     assert row.meta == metadata
 

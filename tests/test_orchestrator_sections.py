@@ -1,4 +1,4 @@
-import agents.orchestrator as orchestrator
+import newsroom.orchestrator as orchestrator
 
 _DRAFT = (
     "Some chatter here\n"

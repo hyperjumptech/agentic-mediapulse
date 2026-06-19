@@ -19,7 +19,7 @@ class Newsletter(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     subject: str = Field(index=True)
     content: str = ""
-    status: str = Field(default="complete", index=True)  # "pending" | "complete" | "failed"
+    status: str = Field(default="completed", index=True)  # "pending" | "completed" | "failed"
     meta: dict = Field(default_factory=dict, sa_column=Column("metadata", _JSON, nullable=False))
     created_at: datetime | None = Field(
         default=None, sa_column=Column(DateTime(timezone=True), nullable=False, server_default=func.now())
@@ -47,7 +47,7 @@ def create_newsletter(subject: str) -> int | None:
 
 
 def finalize_newsletter(
-    newsletter_id: int | None, *, content: str | None = None, metadata: dict | None = None, status: str = "complete"
+    newsletter_id: int | None, *, content: str | None = None, metadata: dict | None = None, status: str = "completed"
 ) -> None:
     """Fill in a previously opened newsletter row (best-effort, no-op if unconfigured or the row is missing)."""
     if newsletter_id is None or not is_configured():

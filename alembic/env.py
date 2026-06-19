@@ -15,12 +15,13 @@ from sqlmodel import SQLModel
 from db.agent_activity import AgentActivity
 from db.engine import _engine_url
 from db.memory import SubjectMemory
+from db.newsletter_translations import NewsletterTranslation
 from db.newsletters import Newsletter
 
 load_dotenv()
 
 # Register every model on SQLModel.metadata so autogenerate can see the full schema.
-_REGISTERED_MODELS = (Newsletter, SubjectMemory, AgentActivity)
+_REGISTERED_MODELS = (Newsletter, SubjectMemory, AgentActivity, NewsletterTranslation)
 target_metadata = SQLModel.metadata
 
 config = context.config

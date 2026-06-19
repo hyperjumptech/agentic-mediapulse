@@ -1,4 +1,4 @@
-import agents.orchestrator as orchestrator
+import newsroom.orchestrator as orchestrator
 
 
 def test_is_ok_matches_only_leading_ok():
