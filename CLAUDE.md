@@ -4,7 +4,7 @@ Guidance for working in this repository.
 
 ## What this is
 
-`agentic-mediapulse` is an agentic newsletter generator. Given a subject (a stock ticker, company name, or industry theme), a newsroom of focused agents researches, writes, and edits a locale-aware briefing across five editorial sections, with every claim traced to a real source. It is built on the Microsoft Agent Framework (`agent-framework`) plus Serper for web search.
+`agentic-mediapulse` is an agentic newsletter generator. Given a subject (a stock ticker, company name, or industry theme), a newsroom of focused agents researches, writes, and edits a locale-aware briefing across five editorial sections, with every claim traced to a real source. It is built on the Microsoft Agent Framework (`agent-framework`) plus a round-robin web toolbelt (Serper, Exa, Tavily, Firecrawl, Diffbot) for search and page fetch.
 
 ## Layout
 
@@ -13,7 +13,7 @@ All application code lives under `src/`. Packages keep their top-level names (`a
 - `src/api.py` — FastAPI service. `POST /run` (full campaign) and `POST /test` (one user). Both run in the background, return `202`, and default to dry-run. Auth via the `X-API-Key` header matched against `SECRET_KEY`.
 - `src/app.py` — local CLI mirroring the API (`run`, `test`), for testing without HTTP.
 - `src/agents/orchestrator.py` — the pipeline: analyst → 5 parallel beat desks (researcher → writer → editor) → managing-editor gap roundtable → masthead → reviewer → deterministic clean/assemble/dedupe. Most non-agent logic (citation gating, URL/article validation, dedupe, subject-name canonicalization, prose humanizing) lives here.
-- `src/agents/` — one module per agent (`analyst`, `researcher`, `writer`, `editor`, `managing_editor`, `reviewer`), plus `beats.py` (beat desks), `campaign.py` (top-level run over subscriptions), `sections.py` (the five editorial beats), `providers/` (subject-memory and ticker-profile context providers), and `tools/` (Serper search, web fetch).
+- `src/agents/` — one module per agent (`analyst`, `researcher`, `writer`, `editor`, `managing_editor`, `reviewer`), plus `beats.py` (beat desks), `campaign.py` (top-level run over subscriptions, which skips and marks `failed` any newsletter that comes out with zero sections rather than sending it), `sections.py` (the five editorial beats), `providers/` (subject-memory and ticker-profile context providers), and `tools/` (the `web_search` and `web_fetch` tools over a round-robin + failover provider package in `tools/providers/`: Serper, Exa, Tavily, Firecrawl, Diffbot, selected deterministically and hidden from the LLM).
 - `src/agents/runtime/` — agent plumbing shared by every agent: `chat_client.py` (per-role chat client plus the `SKILLS` provider), `make_agent.py` (the factory that wires generic activity tracking into every agent), `guardrails.py` (guardrail/citation middleware), and `tracking.py` (the generic `ActivityTracker`/`ToolTracker` middleware, `newsletter_scope`, and run context vars). New agents are built via `make_agent(...)` so tracking is automatic.
 - `src/agents/skills/` — `SKILL.md` files that control agent behavior (`subject-profile`, `section-research`, `newsletter-format`). Prefer editing these over code when changing how agents research or write.
 - `src/db/` — all database access. `mediapulse.py` reads subscriptions and ticker profiles from the upstream MediaPulse Postgres (`MEDIAPULSE_DATABASE_URL`, read-only, raw psycopg). The app's own Postgres (`DATABASE_URL`, SQLModel) uses `engine.py` for the shared engine, with each table's model alongside its operations: `newsletters.py` (archives each newsletter as markdown plus JSONB metadata, with a `pending`/`complete`/`failed` lifecycle via `create_newsletter`/`finalize_newsletter`), `memory.py` (subject-brief agent memory), and `agent_activity.py` (one row per agent run and tool call, tied to its `newsletter_id`, recording status, duration, model, and token usage). The schema is owned by Alembic migrations, not `create_all` (see Migrations).
@@ -101,7 +101,8 @@ The suite covers the deterministic logic, not the LLM agents: orchestrator text/
 
 ## External services
 
-- `SERPER_API_KEY` — web search.
+- `SERPER_API_KEY` — web search and page fetch (the baseline provider).
+- `EXA_API_KEY`, `TAVILY_API_KEY`, `FIRECRAWL_API_KEY`, `DIFFBOT_API_KEY` — optional extra providers; when their key is set they join a deterministic round-robin with failover (Exa and Tavily also search, Firecrawl and Diffbot fetch only). `web_search`/`web_fetch` keep an identical signature, so the LLM never sees which provider served a call.
 - `MEDIAPULSE_DATABASE_URL` — read-only Postgres for subscriptions and ticker data; schema is defined in the upstream [MediaPulse](https://github.com/hyperjumptech/mediapulse) repo.
 - `DATABASE_URL` — the app's own read-write Postgres for archived newsletters and agent memory. Tables are auto-created on first use, separate from `MEDIAPULSE_DATABASE_URL`.
 - `SECRET_KEY` — API auth.

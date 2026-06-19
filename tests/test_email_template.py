@@ -78,3 +78,11 @@ def test_newsletter_sources_dedupes_and_preserves_order():
 
 def test_newsletter_sources_empty_without_links():
     assert email_template.newsletter_sources("# Title\n\nNo links here.") == []
+
+
+def test_has_sections_true_for_cited_newsletter():
+    assert email_template.has_sections(_MARKDOWN) is True
+
+
+def test_has_sections_false_without_items():
+    assert email_template.has_sections("# ACME Pulse: Big Week\n\nStandfirst only, no sections.\n") is False

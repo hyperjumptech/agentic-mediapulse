@@ -1,12 +1,18 @@
 import agents.campaign as campaign
 
 
-def _patch_pipeline(monkeypatch, *, fail_for=()):
+def _patch_pipeline(monkeypatch, *, fail_for=(), empty_for=()):
     async def fake_run_newsletter(ticker):
         if ticker in fail_for:
             raise RuntimeError(f"boom {ticker}")
 
-        return f"# {ticker} markdown"
+        if ticker in empty_for:
+            return f"# {ticker} Pulse\n\nStandfirst only, no sections.\n"
+
+        return (
+            f"# {ticker} Pulse\n\nStandfirst.\n\n## Quick Hits\n"
+            f"Something happened.\n[Read: Source](https://example.com/{ticker})\n---\n"
+        )
 
     sent = []
 
